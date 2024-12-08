@@ -1,3 +1,7 @@
-pandas
-yt-dlp
 streamlit
+pandas
+selenium
+webdriver-manager
+yt-dlp
+fake-useragent
+openpyxl
