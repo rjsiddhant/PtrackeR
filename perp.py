@@ -208,8 +208,6 @@ if 'spotify_url_column' not in st.session_state:
 if 'processed_data' not in st.session_state:
     st.session_state.processed_data = None
 
-st.title("Radio Mirchi Playlist Tracker")
-
 uploaded_file = st.file_uploader("Upload Excel file", type="xlsx")
 
 if uploaded_file:
