@@ -14,6 +14,118 @@ from typing import Optional
 # Initialize UserAgent at the start
 ua = UserAgent()
 
+def get_random_user_agent():
+    return ua.random
+
+def get_spotify_data(url: str) -> int:
+    """Scrape play count from Spotify URL using BS4"""
+    try:
+        headers = {'User-Agent': get_random_user_agent()}
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        play_count_element = soup.find('span', {'data-testid': 'playcount'})
+        
+        if play_count_element:
+            count_text = ''.join(filter(str.isdigit, play_count_element.text))
+            return int(count_text) if count_text else 0
+        return 0
+    except Exception as e:
+        st.error(f"Error scraping {url}: {str(e)}")
+        return 0
+
+def process_spotify_data(df: pd.DataFrame, spotify_url_column: str) -> pd.DataFrame:
+    """Process Spotify data and add play counts"""
+    df = df.copy()
+    play_counts = []
+    
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    try:
+        total_rows = len(df)
+        
+        for index, row in df.iterrows():
+            progress = (index + 1) / total_rows
+            progress_bar.progress(progress)
+            status_text.text(f"Processing row {index + 1} of {total_rows}")
+            
+            spotify_url = row[spotify_url_column]
+            if pd.isna(spotify_url):
+                play_counts.append(0)
+                continue
+            
+            # Get play count
+            play_count = get_spotify_data(spotify_url)
+            play_counts.append(play_count)
+            
+            # Add small delay to avoid rate limiting
+            time.sleep(random.uniform(1, 3))
+        
+        # Add play counts to DataFrame
+        df['Play Count'] = play_counts
+        return df
+        
+    except Exception as e:
+        st.error(f"Error processing data: {str(e)}")
+        return df
+    finally:
+        progress_bar.empty()
+        status_text.empty()
+
+def get_youtube_views(video_url: str) -> Optional[int]:
+    """Get view count from YouTube URL"""
+    try:
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+        }
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=False)
+            return info.get('view_count', 0)
+    except Exception as e:
+        st.error(f"Error getting YouTube views for {video_url}: {str(e)}")
+        return None
+
+def process_youtube_data(df: pd.DataFrame, youtube_url_column: str) -> pd.DataFrame:
+    """Process YouTube data with progress tracking"""
+    df = df.copy()
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    try:
+        total_rows = len(df)
+        views = []
+        
+        for index, row in df.iterrows():
+            progress = (index + 1) / total_rows
+            progress_bar.progress(progress)
+            status_text.text(f"Processing YouTube row {index + 1} of {total_rows}")
+            
+            youtube_url = row[youtube_url_column]
+            if pd.isna(youtube_url):
+                views.append(None)
+                continue
+                
+            try:
+                view_count = get_youtube_views(youtube_url)
+                views_in_millions = view_count / 1_000_000 if view_count else None
+                views.append(views_in_millions)
+            except Exception as e:
+                st.error(f"Error processing URL {youtube_url}: {str(e)}")
+                views.append(None)
+            
+            time.sleep(random.uniform(1, 3))
+            
+        df['Views (Millions)'] = views
+        return df
+        
+    finally:
+        progress_bar.empty()
+        status_text.empty()
+
 # Custom styling
 st.markdown("""
     <style>
