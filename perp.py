@@ -33,6 +33,8 @@ def get_spotify_data(url: str) -> int:
         if play_count_element:
             count_text = ''.join(filter(str.isdigit, play_count_element.text))
             return int(count_text) if count_text else 0
+        else:
+            st.warning(f"Play count element not found for URL: {url}")
         return 0
     except Exception as e:
         st.error(f"Error scraping {url}: {str(e)}")
