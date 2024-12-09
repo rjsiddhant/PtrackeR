@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
 from fake_useragent import UserAgent
 from typing import Optional
+from playwright.sync_api import sync_playwright
 
 # Initialize UserAgent at the start
 ua = UserAgent()
@@ -18,27 +19,32 @@ def get_random_user_agent():
     return ua.random
 
 def get_spotify_data(url: str) -> int:
-    """Scrape play count from Spotify URL using BS4"""
+    """Scrape play count from Spotify URL using Playwright"""
     try:
-        headers = {'User-Agent': get_random_user_agent()}
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        # Find the play count element dynamically
-        play_count_element = soup.find('span', attrs={'data-testid': 'playcount'})
-        
-        if play_count_element:
-            count_text = ''.join(filter(str.isdigit, play_count_element.text))
-            return int(count_text) if count_text else 0
-        else:
-            st.warning(f"Play count element not found for URL: {url}")
-            # Save the HTML for debugging purposes
-            debug_path = Path("debug_html")
-            debug_path.mkdir(exist_ok=True)
-            with open(debug_path / f"debug_{url.split('/')[-1]}.html", 'w', encoding='utf-8') as f:
-                f.write(soup.prettify())
-            return 0
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(url)
+            
+            # Wait for the play count element to be visible
+            page.wait_for_selector('span[data-testid="playcount"]')
+            
+            # Extract the play count element
+            play_count_element = page.query_selector('span[data-testid="playcount"]')
+            
+            if play_count_element:
+                count_text = ''.join(filter(str.isdigit, play_count_element.inner_text()))
+                browser.close()
+                return int(count_text) if count_text else 0
+            else:
+                st.warning(f"Play count element not found for URL: {url}")
+                # Save the HTML for debugging purposes
+                debug_path = Path("debug_html")
+                debug_path.mkdir(exist_ok=True)
+                with open(debug_path / f"debug_{url.split('/')[-1]}.html", 'w', encoding='utf-8') as f:
+                    f.write(page.content())
+                browser.close()
+                return 0
     except Exception as e:
         st.error(f"Error scraping {url}: {str(e)}")
         return 0
