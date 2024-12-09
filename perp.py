@@ -15,6 +15,8 @@ from fake_useragent import UserAgent
 from typing import Optional
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.remote_connection import RemoteConnection
 
 # Custom styling
 st.markdown("""
@@ -47,27 +49,16 @@ with col2:
 if st.button("Process Data for Spotify"):
     st.write("Processing data for Spotify...")
 
-    # Initialize ChromeDriver
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in headless mode
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--remote-debugging-port=9222")
-
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-
-    # Your processing code here
     try:
-        # Example processing code
+        driver = setup_selenium()
         driver.get("https://www.spotify.com")
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         st.write("Data processed successfully!")
     except Exception as e:
         st.error(f"Error processing data: {e}")
     finally:
-        driver.quit()
+        if 'driver' in locals():
+            driver.quit()
 
 # Initialize UserAgent for rotating user agents
 ua = UserAgent()
@@ -92,13 +83,19 @@ def retry_with_backoff(func, max_retries=3, backoff_factor=2):
         raise Exception("Max retries reached. Unable to complete request.")
     return wrapper
 
-def setup_selenium():
-    """Setup Selenium WebDriver"""
-    options = webdriver.ChromeOptions()
+def setup_selenium() -> WebDriver:
+    """Setup Selenium Remote WebDriver"""
+    options = Options()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    
+    # Use remote WebDriver with selenium standalone server
+    driver = webdriver.Remote(
+        command_executor='http://localhost:4444/wd/hub',
+        options=options
+    )
+    return driver
 
 def scrape_playcount(url: str, driver) -> int:
     """Scrape play count from Spotify URL"""
