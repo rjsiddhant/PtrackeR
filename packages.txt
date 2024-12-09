@@ -7,3 +7,4 @@ libasound2
 libatk1.0-0
 libpangocairo-1.0-0
 libxrandr2
+chromium-browser
