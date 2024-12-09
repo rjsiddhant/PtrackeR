@@ -43,6 +43,32 @@ with col1:
 with col2:
     st.title("Mirchi Playlist Tracker")
 
+# Add a single "Process Data" button for Spotify
+if st.button("Process Data for Spotify"):
+    st.write("Processing data for Spotify...")
+
+    # Initialize ChromeDriver
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run in headless mode
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
+    # Your processing code here
+    try:
+        # Example processing code
+        driver.get("https://www.spotify.com")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+        st.write("Data processed successfully!")
+    except Exception as e:
+        st.error(f"Error processing data: {e}")
+    finally:
+        driver.quit()
+
 # Initialize UserAgent for rotating user agents
 ua = UserAgent()
 
@@ -207,6 +233,8 @@ if 'spotify_url_column' not in st.session_state:
     st.session_state.spotify_url_column = None
 if 'processed_data' not in st.session_state:
     st.session_state.processed_data = None
+
+st.title("Radio Mirchi Playlist Tracker")
 
 uploaded_file = st.file_uploader("Upload Excel file", type="xlsx")
 
