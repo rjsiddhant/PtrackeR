@@ -25,18 +25,20 @@ def get_spotify_data(url: str) -> int:
         response.raise_for_status()
         
         soup = BeautifulSoup(response.text, 'html.parser')
-        play_count_element = soup.find('span', {
-            'class': 'encore-text encore-text-body-small encore-internal-color-text-subdued w1TBi3o5CTM7zW1EB3Bm',
-            'data-testid': 'playcount'
-        })
+        # Find the play count element dynamically
+        play_count_element = soup.find('span', attrs={'data-testid': 'playcount'})
         
         if play_count_element:
             count_text = ''.join(filter(str.isdigit, play_count_element.text))
             return int(count_text) if count_text else 0
         else:
             st.warning(f"Play count element not found for URL: {url}")
-            st.write(soup.prettify())  # Log the entire HTML for debugging
-        return 0
+            # Save the HTML for debugging purposes
+            debug_path = Path("debug_html")
+            debug_path.mkdir(exist_ok=True)
+            with open(debug_path / f"debug_{url.split('/')[-1]}.html", 'w', encoding='utf-8') as f:
+                f.write(soup.prettify())
+            return 0
     except Exception as e:
         st.error(f"Error scraping {url}: {str(e)}")
         return 0
