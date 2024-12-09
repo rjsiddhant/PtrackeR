@@ -5,5 +5,3 @@ webdriver-manager
 yt-dlp
 fake-useragent
 openpyxl
-chromium
-chromium-chromedriver
