@@ -10,7 +10,16 @@ from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
 from fake_useragent import UserAgent
 from typing import Optional
-from playwright.sync_api import sync_playwright, Playwright
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+
+# Constants
+MAX_RETRIES = 3
+RATE_LIMIT = 2  # seconds
 
 # Initialize UserAgent at the start
 ua = UserAgent()
@@ -18,40 +27,45 @@ ua = UserAgent()
 def get_random_user_agent():
     return ua.random
 
-def install_playwright_browsers():
-    from playwright.__main__ import main as playwright_main
-    playwright_main(["install"])
+def scrape_playcount(url: str, driver) -> Optional[int]:
+    """Scrape Spotify play count using Selenium"""
+    if not url or 'spotify.com' not in url:
+        return None
+        
+    for attempt in range(MAX_RETRIES):
+        try:
+            time.sleep(RATE_LIMIT)
+            driver.get(url)
+            
+            # Wait for the play count element to be present
+            play_count_element = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "span.encore-text.encore-text-body-small.encore-internal-color-text-subdued.w1TBi3o5CTM7zW1EB3Bm[data-encore-id='text'][data-testid='playcount']"))
+            )
+            
+            count_text = ''.join(filter(str.isdigit, play_count_element.text))
+            return int(count_text) if count_text else None
+                
+        except Exception as e:
+            if attempt == MAX_RETRIES - 1:
+                st.error(f"Error scraping {url}: {str(e)}")
+            time.sleep(2)
+            
+    return None
 
 def get_spotify_data(url: str) -> int:
-    """Scrape play count from Spotify URL using Playwright"""
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            page.goto(url)
-            
-            # Wait for the play count element to be visible
-            page.wait_for_selector('span[data-testid="playcount"]')
-            
-            # Extract the play count element
-            play_count_element = page.query_selector('span[data-testid="playcount"]')
-            
-            if play_count_element:
-                count_text = ''.join(filter(str.isdigit, play_count_element.inner_text()))
-                browser.close()
-                return int(count_text) if count_text else 0
-            else:
-                st.warning(f"Play count element not found for URL: {url}")
-                # Save the HTML for debugging purposes
-                debug_path = Path("debug_html")
-                debug_path.mkdir(exist_ok=True)
-                with open(debug_path / f"debug_{url.split('/')[-1]}.html", 'w', encoding='utf-8') as f:
-                    f.write(page.content())
-                browser.close()
-                return 0
-    except Exception as e:
-        st.error(f"Error scraping {url}: {str(e)}")
-        return 0
+    """Scrape play count from Spotify URL using Selenium"""
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument(f'user-agent={get_random_user_agent()}')
+    
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    
+    play_count = scrape_playcount(url, driver)
+    driver.quit()
+    
+    return play_count if play_count is not None else 0
 
 def process_spotify_data(df: pd.DataFrame, spotify_url_column: str) -> pd.DataFrame:
     """Process Spotify data and add play counts"""
@@ -302,6 +316,3 @@ st.write("""
 # Footer
 st.markdown("---")
 st.write("© ENIL. All rights reserved.")
-
-# Install Playwright browsers if not already installed
-install_playwright_browsers()
