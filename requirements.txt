@@ -4,5 +4,6 @@ requests
 beautifulsoup4
 yt-dlp
 fake-useragent
-playwright
+selenium
+webdriver-manager
 openpyxl
