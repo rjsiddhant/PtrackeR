@@ -25,7 +25,10 @@ def get_spotify_data(url: str) -> int:
         response.raise_for_status()
         
         soup = BeautifulSoup(response.text, 'html.parser')
-        play_count_element = soup.find('span', {'data-testid': 'playcount'})
+        play_count_element = soup.find('span', {
+            'class': 'encore-text encore-text-body-small encore-internal-color-text-subdued w1TBi3o5CTM7zW1EB3Bm',
+            'data-testid': 'playcount'
+        })
         
         if play_count_element:
             count_text = ''.join(filter(str.isdigit, play_count_element.text))
