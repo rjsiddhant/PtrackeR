@@ -54,18 +54,22 @@ def scrape_playcount(url: str, driver) -> Optional[int]:
 
 def get_spotify_data(url: str) -> int:
     """Scrape play count from Spotify URL using Selenium"""
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument(f'user-agent={get_random_user_agent()}')
-    
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-    
-    play_count = scrape_playcount(url, driver)
-    driver.quit()
-    
-    return play_count if play_count is not None else 0
+    try:
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument(f'user-agent={get_random_user_agent()}')
+        
+        driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+        
+        play_count = scrape_playcount(url, driver)
+        driver.quit()
+        
+        return play_count if play_count is not None else 0
+    except Exception as e:
+        st.error(f"Error initializing WebDriver: {str(e)}")
+        return 0
 
 def process_spotify_data(df: pd.DataFrame, spotify_url_column: str) -> pd.DataFrame:
     """Process Spotify data and add play counts"""
@@ -158,6 +162,13 @@ def process_youtube_data(df: pd.DataFrame, youtube_url_column: str) -> pd.DataFr
         progress_bar.empty()
         status_text.empty()
 
+def ensure_consistent_types(df: pd.DataFrame) -> pd.DataFrame:
+    """Ensure all columns in the DataFrame have consistent types"""
+    for column in df.columns:
+        if df[column].dtype == 'object':
+            df[column] = df[column].astype(str)
+    return df
+
 # Custom styling
 st.markdown("""
     <style>
@@ -232,10 +243,10 @@ if uploaded_file:
                         st.session_state.spotify_df,
                         spotify_url_column
                     )
-                    st.session_state.spotify_df = updated_df
+                    st.session_state.spotify_df = ensure_consistent_types(updated_df)
                     st.success("Spotify processing complete!")
                     st.write("Updated Spotify data:")
-                    st.dataframe(updated_df)
+                    st.dataframe(st.session_state.spotify_df)
 
     with col2:
         if st.session_state.youtube_df is not None:
@@ -251,10 +262,10 @@ if uploaded_file:
                         st.session_state.youtube_df,
                         youtube_url_column
                     )
-                    st.session_state.youtube_df = updated_df
+                    st.session_state.youtube_df = ensure_consistent_types(updated_df)
                     st.success("YouTube processing complete!")
                     st.write("Updated YouTube data:")
-                    st.dataframe(updated_df)
+                    st.dataframe(st.session_state.youtube_df)
                     
                     if len(updated_df) > 0:
                         st.bar_chart(updated_df.set_index(youtube_url_column)['Views (Millions)'])
