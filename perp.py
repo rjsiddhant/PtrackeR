@@ -5,11 +5,8 @@ import random
 from io import BytesIO
 import os
 from pathlib import Path
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
+import requests
+from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
 from fake_useragent import UserAgent
 from typing import Optional
@@ -83,19 +80,23 @@ def retry_with_backoff(func, max_retries=3, backoff_factor=2):
         raise Exception("Max retries reached. Unable to complete request.")
     return wrapper
 
-def setup_selenium() -> WebDriver:
-    """Setup Selenium Remote WebDriver"""
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    
-    # Use remote WebDriver with selenium standalone server
-    driver = webdriver.Remote(
-        command_executor='http://localhost:4444/wd/hub',
-        options=options
-    )
-    return driver
+def get_spotify_data(url: str) -> int:
+    """Scrape play count from Spotify URL using BS4"""
+    try:
+        headers = {'User-Agent': get_random_user_agent()}
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        play_count_element = soup.find('span', {'data-testid': 'playcount'})
+        
+        if play_count_element:
+            count_text = ''.join(filter(str.isdigit, play_count_element.text))
+            return int(count_text) if count_text else 0
+        return 0
+    except Exception as e:
+        st.error(f"Error scraping {url}: {str(e)}")
+        return 0
 
 def scrape_playcount(url: str, driver) -> int:
     """Scrape play count from Spotify URL"""
@@ -142,11 +143,9 @@ def process_spotify_data(df: pd.DataFrame, spotify_url_column: str) -> pd.DataFr
     status_text = st.empty()
     
     try:
-        driver = setup_selenium()
         total_rows = len(df)
         
         for index, row in df.iterrows():
-            # Update progress
             progress = (index + 1) / total_rows
             progress_bar.progress(progress)
             status_text.text(f"Processing row {index + 1} of {total_rows}")
@@ -157,11 +156,11 @@ def process_spotify_data(df: pd.DataFrame, spotify_url_column: str) -> pd.DataFr
                 continue
             
             # Get play count
-            play_count = scrape_playcount(spotify_url, driver)
+            play_count = get_spotify_data(spotify_url)
             play_counts.append(play_count)
             
             # Add small delay to avoid rate limiting
-            time.sleep(1)
+            time.sleep(random.uniform(1, 3))
         
         # Add play counts to DataFrame
         df['Play Count'] = play_counts
@@ -171,8 +170,6 @@ def process_spotify_data(df: pd.DataFrame, spotify_url_column: str) -> pd.DataFr
         st.error(f"Error processing data: {str(e)}")
         return df
     finally:
-        if 'driver' in locals():
-            driver.quit()
         progress_bar.empty()
         status_text.empty()
 
