@@ -10,13 +10,17 @@ from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
 from fake_useragent import UserAgent
 from typing import Optional
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, Playwright
 
 # Initialize UserAgent at the start
 ua = UserAgent()
 
 def get_random_user_agent():
     return ua.random
+
+def install_playwright_browsers():
+    from playwright.__main__ import main as playwright_main
+    playwright_main(["install"])
 
 def get_spotify_data(url: str) -> int:
     """Scrape play count from Spotify URL using Playwright"""
@@ -298,3 +302,6 @@ st.write("""
 # Footer
 st.markdown("---")
 st.write("© ENIL. All rights reserved.")
+
+# Install Playwright browsers if not already installed
+install_playwright_browsers()
