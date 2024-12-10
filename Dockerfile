@@ -6,26 +6,37 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
-    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
-    && apt-get update \
-    && apt-get install -y \
-    google-chrome-stable \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libxshmfence1 \
+    libx11-xcb1 \
+    libxcb-dri3-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python packages
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers
-RUN playwright install chromium
-RUN playwright install-deps
+# Install Playwright and browsers
+RUN pip install playwright==1.42.0
+RUN playwright install --with-deps chromium
 
-# Copy application files
+# Copy application code
 COPY . .
 
 # Expose port
 EXPOSE 8501
 
 # Command to run the application
-CMD ["streamlit", "run", "plexy.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "perp.py", "--server.port=8501", "--server.address=0.0.0.0"]
