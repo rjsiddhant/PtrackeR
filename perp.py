@@ -21,8 +21,9 @@ def get_spotify_data(url: str) -> int:
             try:
                 time.sleep(RATE_LIMIT)
                 with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True)
-                    page = browser.new_page()
+                    browser = p.firefox.launch(headless=True)
+                    context = browser.new_context()
+                    page = context.new_page()
                     page.goto(url, wait_until='networkidle', timeout=60000)
                     
                     # Try both selectors
