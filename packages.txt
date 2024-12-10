@@ -1,10 +1,2 @@
-libnss3
-libgconf-2-4
-libxi6
-libgdk-pixbuf2.0-0
-libxcomposite1
-libasound2
-libatk1.0-0
-libpangocairo-1.0-0
-libxrandr2
-chromium-browser
+firefox-esr
+xvfb
