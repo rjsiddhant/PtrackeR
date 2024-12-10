@@ -1,9 +1,6 @@
-streamlit
-pandas
-requests
-beautifulsoup4
-yt-dlp
-fake-useragent
-selenium
-webdriver-manager
-openpyxl
+streamlit==1.32.0
+pandas==2.2.0
+yt-dlp==2024.3.10
+playwright==1.42.0
+openpyxl==3.1.2
+python-dotenv==1.0.1
