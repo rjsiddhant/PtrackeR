@@ -1,0 +1,12 @@
+name: ptracker
+services:
+- name: web
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: rjsiddhant/PtrackeR
+  dockerfile_path: Dockerfile
+  http_port: 8501
+  instance_size_slug: basic-xxs
+  routes:
+  - path: /
